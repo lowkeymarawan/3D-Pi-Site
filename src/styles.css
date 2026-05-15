@@ -381,3 +381,20 @@ html.intro-lock, body.intro-lock{overflow:hidden!important;}
 .eyebrow{color:#000000}
 .table-row.head{background:rgba(0,182,248,.18)}
 .video-intro,.three-intro.video-intro,.intro-video{background:#ffffff!important}
+
+/* Extra cyan polish */
+.site-header{border-color:rgba(0,182,248,.35);box-shadow:0 16px 50px rgba(0,182,248,.14)}
+.brand .logo-mark{filter:drop-shadow(0 0 14px rgba(0,182,248,.35)) drop-shadow(0 8px 13px rgba(0,0,0,.08))}
+nav a:hover{color:var(--blue)}
+nav a:after{background:var(--blue)}
+.hero:before{content:"";position:absolute;inset:auto -12% -28% -12%;height:52%;background:radial-gradient(circle,rgba(0,182,248,.22),transparent 62%);filter:blur(18px);pointer-events:none}
+.logo-sculpture:before{content:"";position:absolute;inset:8%;border-radius:50%;background:rgba(0,182,248,.18);filter:blur(34px);animation:pulseCyan 4s ease-in-out infinite}
+.sculpture-logo{filter:drop-shadow(0 0 28px rgba(0,182,248,.34)) drop-shadow(0 26px 22px rgba(0,0,0,.18))}
+.glass-card{border-color:rgba(0,182,248,.32);box-shadow:0 24px 80px rgba(0,182,248,.18)}
+.mini-stat,.module-card,.insight-card,.solution-list div{border-color:rgba(0,182,248,.20)}
+.metric-grid{border-color:rgba(0,182,248,.35);background:rgba(0,182,248,.28)}
+.metric strong,.dash-card strong,.insight-card span,.tiny-label{color:var(--blue)}
+.dashboard-shell{border-color:rgba(0,182,248,.28);box-shadow:0 40px 120px rgba(0,182,248,.18)}
+.dash-card,.table-card{border-color:rgba(0,182,248,.22)}
+.cta{background:radial-gradient(circle at 50% 0%,rgba(0,182,248,.35),transparent 34%),#000000;box-shadow:0 40px 110px rgba(0,182,248,.24)}
+@keyframes pulseCyan{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:.9;transform:scale(1.06)}}
