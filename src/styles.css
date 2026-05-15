@@ -335,3 +335,34 @@ html.intro-lock, body.intro-lock{overflow:hidden!important;}
     }
   }
 }
+
+/* Smooth website reveal underneath the logo handoff */
+.homepage{
+  opacity:1!important;
+  animation:none!important;
+}
+.homepage.intro-active{
+  opacity:0!important;
+  transform:translateY(18px) scale(.985);
+  filter:blur(8px);
+}
+.homepage.intro-active.intro-revealing{
+  opacity:1!important;
+  transform:none;
+  filter:blur(0);
+  transition:opacity 1.05s ease, transform 1.05s cubic-bezier(.16,1,.3,1), filter 1.05s ease;
+}
+.homepage:not(.intro-active){
+  opacity:1!important;
+  transform:none;
+  filter:none;
+}
+.homepage.intro-active.intro-revealing .hero-copy,
+.homepage.intro-active.intro-revealing .hero-art{
+  animation:handoffContentRise 1.05s cubic-bezier(.16,1,.3,1) both;
+}
+.homepage.intro-active.intro-revealing .hero-art{animation-delay:.08s;}
+@keyframes handoffContentRise{
+  from{opacity:0;transform:translateY(26px) scale(.985);}
+  to{opacity:1;transform:none;}
+}

@@ -94,11 +94,17 @@ const insights = [
 
 function App() {
   const [introVisible, setIntroVisible] = useState(true);
+  const [introRevealing, setIntroRevealing] = useState(false);
 
   return (
     <>
-      {introVisible && <WebsiteIntro onComplete={() => setIntroVisible(false)} />}
-      <main className={introVisible ? 'homepage intro-active' : 'homepage'}>
+      {introVisible && (
+        <WebsiteIntro
+          onHandoff={() => setIntroRevealing(true)}
+          onComplete={() => setIntroVisible(false)}
+        />
+      )}
+      <main className={`homepage ${introVisible ? 'intro-active' : ''} ${introRevealing ? 'intro-revealing' : ''}`}>
         <Header />
         <Hero />
         <LogoStrip />
@@ -114,22 +120,30 @@ function App() {
   );
 }
 
-function WebsiteIntro({ onComplete }) {
+function WebsiteIntro({ onComplete, onHandoff }) {
   const [handoff, setHandoff] = useState(false);
   const completedRef = useRef(false);
+  const handoffStartedRef = useRef(false);
+
+  const beginHandoff = () => {
+    if (handoffStartedRef.current) return;
+    handoffStartedRef.current = true;
+    setHandoff(true);
+    onHandoff?.();
+  };
 
   useEffect(() => {
     document.documentElement.classList.add('intro-lock');
     document.body.classList.add('intro-lock');
     const fallback = window.setTimeout(() => {
-      if (!completedRef.current) setHandoff(true);
+      if (!completedRef.current) beginHandoff();
     }, 9800);
     return () => {
       window.clearTimeout(fallback);
       document.documentElement.classList.remove('intro-lock');
       document.body.classList.remove('intro-lock');
     };
-  }, []);
+  }, [onHandoff]);
 
   useEffect(() => {
     if (!handoff) return undefined;
@@ -158,8 +172,8 @@ function WebsiteIntro({ onComplete }) {
         muted
         playsInline
         preload="auto"
-        onEnded={() => setHandoff(true)}
-        onError={() => setHandoff(true)}
+        onEnded={beginHandoff}
+        onError={beginHandoff}
       />
       <div className="intro-logo-morph">
         <BrandLogo />
