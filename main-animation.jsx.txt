@@ -1,0 +1,951 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  ArrowRight,
+  BarChart3,
+  Boxes,
+  Building2,
+  Calculator,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Factory,
+  FileText,
+  Globe2,
+  Layers3,
+  LockKeyhole,
+  PackageCheck,
+  PieChart,
+  Printer,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
+  Users2,
+  Zap
+} from 'lucide-react';
+import * as THREE from 'three';
+import './styles.css';
+
+const nav = ['Platform', 'Solutions', 'Insights', 'Pricing', 'Company'];
+
+const metrics = [
+  ['32%', 'average workflow efficiency gain'],
+  ['18 hrs', 'weekly admin time saved'],
+  ['99.9%', 'platform reliability target'],
+  ['4.7x', 'faster quote turnaround for 3D-Pi']
+];
+
+const modules = [
+  {
+    icon: Layers3,
+    title: 'Custom Software Products',
+    text: 'Design and ship tailored web platforms, dashboards, internal tools, and automation systems for companies that need software built around their workflow.'
+  },
+  {
+    icon: Calculator,
+    title: '3D-Pi Pricing Engine',
+    text: 'One flagship project helps 3D printing teams calculate quotes from material usage, print time, labor, depreciation, waste, taxes, packaging, and markup.'
+  },
+  {
+    icon: PackageCheck,
+    title: 'Product Lifecycle Delivery',
+    text: 'Move software from idea and prototype to production, support, analytics, and continuous improvement with clear visibility at every step.'
+  },
+  {
+    icon: BarChart3,
+    title: 'Reports & Business Intelligence',
+    text: 'Turn product usage, revenue, costs, operations, and customer activity into dashboards leaders can actually act on.'
+  }
+];
+
+const solutions = [
+  'Startups building MVPs',
+  'Businesses needing internal tools',
+  'SaaS product teams',
+  '3D printing teams using 3D-Pi',
+  'Operations-heavy companies',
+  'Enterprises modernizing workflows'
+];
+
+const insights = [
+  {
+    label: 'Operations Brief',
+    title: 'Why custom software decides how fast modern teams can scale',
+    meta: '6 min read'
+  },
+  {
+    label: 'Benchmark',
+    title: 'The hidden cost of disconnected spreadsheets and manual workflows',
+    meta: 'Report'
+  },
+  {
+    label: 'Playbook',
+    title: 'Building a focused software product from idea to launch',
+    meta: 'Guide'
+  }
+];
+
+function App() {
+  const [introVisible, setIntroVisible] = useState(true);
+
+  return (
+    <>
+      {introVisible && <WebsiteIntro onComplete={() => setIntroVisible(false)} />}
+      <main className={introVisible ? 'homepage intro-active' : 'homepage'}>
+        <Header />
+        <Hero />
+        <LogoStrip />
+        <Platform />
+        <StrategyBand />
+        <Solutions />
+        <DashboardPreview />
+        <Insights />
+        <CTA />
+        <Footer />
+      </main>
+    </>
+  );
+}
+
+function WebsiteIntro({ onComplete }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+
+    let frameId;
+    let disposed = false;
+    const clock  = new THREE.Clock();
+    const startTime = performance.now();
+
+    // ── Renderer ─────────────────────────────────────────────────────────────
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.18;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // ── Post-processing (manual, no EffectComposer) ──────────────────────────
+    // One HDR render target → subtle bloom + soft vignette + fade shader.
+    // Intentionally restrained to keep the white/black palette clean.
+
+    const RT = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat,
+      type: THREE.HalfFloatType,
+    });
+    const RT_BLOOM = new THREE.WebGLRenderTarget(
+      Math.floor(window.innerWidth / 3),
+      Math.floor(window.innerHeight / 3),
+      { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat }
+    );
+
+    const quadGeo = new THREE.PlaneGeometry(2, 2);
+
+    // Downsample + threshold: only very bright whites glow
+    const bloomExtractMat = new THREE.ShaderMaterial({
+      uniforms: { tDiffuse: { value: RT.texture }, uThreshold: { value: 0.72 } },
+      vertexShader:   `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.); }`,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float uThreshold;
+        varying vec2 vUv;
+        void main(){
+          vec4 c = texture2D(tDiffuse, vUv);
+          float lum = dot(c.rgb, vec3(0.2126,0.7152,0.0722));
+          float soft = smoothstep(uThreshold, uThreshold+0.18, lum);
+          gl_FragColor = vec4(c.rgb * soft, 1.);
+        }`,
+    });
+
+    // Separable Gaussian blur — horizontal pass
+    const blurHMat = new THREE.ShaderMaterial({
+      uniforms: { tDiffuse: { value: RT_BLOOM.texture }, uDir: { value: new THREE.Vector2(1, 0) }, uRes: { value: new THREE.Vector2() } },
+      vertexShader:   `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.); }`,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform vec2 uDir;
+        uniform vec2 uRes;
+        varying vec2 vUv;
+        void main(){
+          vec2 step = uDir / uRes;
+          vec4 c = vec4(0.);
+          c += texture2D(tDiffuse, vUv - step*3.) * 0.0625;
+          c += texture2D(tDiffuse, vUv - step*2.) * 0.125;
+          c += texture2D(tDiffuse, vUv - step*1.) * 0.25;
+          c += texture2D(tDiffuse, vUv          ) * 0.25;
+          c += texture2D(tDiffuse, vUv + step*1.) * 0.25;
+          c += texture2D(tDiffuse, vUv + step*2.) * 0.125;
+          c += texture2D(tDiffuse, vUv + step*3.) * 0.0625;
+          gl_FragColor = c;
+        }`,
+    });
+
+    // Final composite
+    const compositeMat = new THREE.ShaderMaterial({
+      uniforms: {
+        tScene: { value: RT.texture },
+        tBloom: { value: RT_BLOOM.texture },
+        uFade:  { value: 0 },
+        uTime:  { value: 0 },
+      },
+      vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.); }`,
+      fragmentShader: `
+        uniform sampler2D tScene;
+        uniform sampler2D tBloom;
+        uniform float uFade;
+        uniform float uTime;
+        varying vec2 vUv;
+
+        float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5); }
+
+        void main(){
+          vec4 scene = texture2D(tScene, vUv);
+          vec4 bloom = texture2D(tBloom, vUv);
+
+          // Additive bloom — only affects bright areas, so background stays clean
+          scene.rgb += bloom.rgb * 0.28;
+
+          // Very soft vignette — tasteful, not crushing
+          vec2  c   = vUv - 0.5;
+          float vig = 1.0 - smoothstep(0.38, 1.1, length(c) * 1.55);
+          scene.rgb *= mix(0.78, 1.0, vig);
+
+          // Film grain — extremely subtle
+          float grain = (hash(vUv + fract(uTime * 0.017)) - 0.5) * 0.015;
+          scene.rgb += grain;
+
+          // Master fade (black → scene → black)
+          scene.rgb *= uFade;
+
+          gl_FragColor = vec4(scene.rgb, 1.);
+        }`,
+    });
+
+    const postCam   = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const postScene = new THREE.Scene();
+    const compositeQuad = new THREE.Mesh(quadGeo, compositeMat);
+    const bloomExtractQuad = new THREE.Mesh(quadGeo, bloomExtractMat);
+    const blurQuad  = new THREE.Mesh(quadGeo, blurHMat);
+    // Note: we add/remove from postScene each pass to avoid state leaks.
+
+    // ── Main Scene ───────────────────────────────────────────────────────────
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf5f3f0);  // warm off-white — matches the original
+    scene.fog = new THREE.Fog(0xf5f3f0, 12, 26);   // same warm cream fog
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+
+    // ── Lighting ─────────────────────────────────────────────────────────────
+    // Warm studio white, same character as original but with a cooler fill
+    // and a soft rim for material separation.
+
+    const ambient = new THREE.HemisphereLight(0xffffff, 0xc8c2ba, 2.2);
+    scene.add(ambient);
+
+    const key = new THREE.DirectionalLight(0xfff8f0, 4.8);
+    key.position.set(3.5, 9, 5.5);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.left  = -9;
+    key.shadow.camera.right =  9;
+    key.shadow.camera.top   =  9;
+    key.shadow.camera.bottom= -9;
+    key.shadow.radius = 4;       // softer shadow edge
+    key.shadow.bias   = -0.0003;
+    scene.add(key);
+
+    // Cool fill from left/front — separates the dark printer from the bg
+    const fill = new THREE.DirectionalLight(0xddeeff, 1.4);
+    fill.position.set(-5, 4, 5);
+    scene.add(fill);
+
+    // Soft backlight rim — pure white, adds depth to metallic parts
+    const rim = new THREE.DirectionalLight(0xffffff, 2.2);
+    rim.position.set(-2, 6, -7);
+    scene.add(rim);
+
+    // Nozzle tip glow — warm white only, no colour tint
+    const nozzleGlow = new THREE.PointLight(0xffd4a0, 0, 3, 2);
+    scene.add(nozzleGlow);
+
+    // ── Print Bed ────────────────────────────────────────────────────────────
+    const bedGroup = new THREE.Group();
+    scene.add(bedGroup);
+
+    // Off-white textured bed surface
+    const bedMat = new THREE.MeshStandardMaterial({ color: 0xedeae4, roughness: 0.62, metalness: 0.02 });
+    const bed = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.18, 5.4), bedMat);
+    bed.castShadow = true;
+    bed.receiveShadow = true;
+    bedGroup.add(bed);
+
+    // Glass coat — very slight reflection, ties to the original
+    const glass = new THREE.Mesh(
+      new THREE.PlaneGeometry(7.3, 4.9),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.18, metalness: 0, transparent: true, opacity: 0.28 })
+    );
+    glass.rotation.x = -Math.PI / 2;
+    glass.position.y = 0.101;
+    glass.receiveShadow = true;
+    bedGroup.add(glass);
+
+    // Grid — same pale lines as original
+    const grid = new THREE.GridHelper(7.2, 18, 0xc0bab2, 0xd5d0c8);
+    grid.position.y = 0.112;
+    grid.material.transparent = true;
+    grid.material.opacity = 0.32;
+    bedGroup.add(grid);
+
+    // ── Printer Frame ────────────────────────────────────────────────────────
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.36, metalness: 0.6 });
+
+    // Main X-axis rail (back, same as original)
+    const railX = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 7.6, 32), railMat);
+    railX.rotation.z = Math.PI / 2;
+    railX.position.set(0, 3.25, -2.2);
+    railX.castShadow = true;
+    scene.add(railX);
+
+    // Second X rail (front, new — gives it real printer depth)
+    const railXFront = railX.clone();
+    railXFront.position.z = 2.2;
+    scene.add(railXFront);
+
+    // Y-axis cross rod connecting both rails
+    const crossRod = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 4.5, 28), railMat);
+    crossRod.position.set(0, 3.25, 0);
+    crossRod.castShadow = true;
+    scene.add(crossRod);
+
+    // 4 corner posts
+    [-3.6, 3.6].forEach((x) => {
+      [-2.2, 2.2].forEach((z) => {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 4.4, 32), railMat);
+        post.position.set(x, 1.55, z);
+        post.castShadow = true;
+        scene.add(post);
+      });
+    });
+
+    // ── Nozzle Carriage ──────────────────────────────────────────────────────
+    const nozzleGroup = new THREE.Group();
+    scene.add(nozzleGroup);
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.34, metalness: 0.42 });
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.72, 0.72), bodyMat);
+    body.position.y = -0.45;
+    body.castShadow = true;
+    nozzleGroup.add(body);
+
+    // Screws
+    const screwMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.18, metalness: 0.85 });
+    const screwGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.022, 24);
+    [[-0.22, -0.42], [-0.22, -0.68], [0.22, -0.42], [0.22, -0.68]].forEach(([x, y]) => {
+      const s = new THREE.Mesh(screwGeo, screwMat);
+      s.rotation.x = Math.PI / 2;
+      s.position.set(x, y, 0.275);
+      nozzleGroup.add(s);
+    });
+
+    // Heatsink fins (6 fins, evenly spaced)
+    const finMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.22, metalness: 0.78 });
+    for (let i = 0; i < 6; i++) {
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.038, 0.4), finMat);
+      fin.position.y = -0.78 - i * 0.058;
+      fin.castShadow = true;
+      nozzleGroup.add(fin);
+    }
+
+    // Heater block — matte dark
+    const heaterMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.28, metalness: 0.65 });
+    const heater = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.26, 0.38), heaterMat);
+    heater.position.y = -1.24;
+    heater.castShadow = true;
+    nozzleGroup.add(heater);
+
+    // Nozzle tip — polished steel
+    const tipMat = new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.08, metalness: 0.96 });
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.175, 0.36, 32), tipMat);
+    tip.rotation.x = Math.PI;
+    tip.position.y = -1.5;
+    tip.castShadow = true;
+    nozzleGroup.add(tip);
+
+    // Filament strand — dark, thin
+    const filament = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02, 0.02, 1.0, 10),
+      new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.55, transparent: true, opacity: 0 })
+    );
+    filament.position.y = -2.0;
+    nozzleGroup.add(filament);
+
+    // ── Logo Geometry ─────────────────────────────────────────────────────────
+    const logoGroup = new THREE.Group();
+    logoGroup.position.set(0, 0.105, 0);
+    scene.add(logoGroup);
+
+    const LOGO_SCALE  = 0.038;
+    const STROKE_RAD  = 0.115;
+
+    function svgPoint(sx, sy, y = 0) {
+      return new THREE.Vector3((sx - 100) * LOGO_SCALE, y, (sy - 100) * LOGO_SCALE);
+    }
+
+    function arcPoints(cx, cy, r, startDeg, endDeg, steps = 130) {
+      const pts = [];
+      for (let i = 0; i <= steps; i++) {
+        const deg = startDeg + (endDeg - startDeg) * (i / steps);
+        const rad = (deg * Math.PI) / 180;
+        pts.push(svgPoint(cx + r * Math.cos(rad), cy + r * Math.sin(rad)));
+      }
+      return pts;
+    }
+
+    function tubeFromCurve(pts, radius = STROKE_RAD, segs = 130) {
+      const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.05);
+      return new THREE.TubeGeometry(curve, segs, radius, 20, false);
+    }
+
+    function tubeFromPolyline(svgPts, radius = STROKE_RAD, segs = 80) {
+      const path = new THREE.CurvePath();
+      const pts  = svgPts.map(([sx, sy]) => svgPoint(sx, sy));
+      for (let i = 0; i < pts.length - 1; i++) path.add(new THREE.LineCurve3(pts[i], pts[i + 1]));
+      return new THREE.TubeGeometry(path, segs, radius, 20, false);
+    }
+
+    // Polished matte-black for the printed logo — like a fresh FDM print
+    const logoTopMat = new THREE.MeshStandardMaterial({
+      color:     0x0d0d0d,
+      roughness: 0.52,
+      metalness: 0.10,
+      transparent: true,
+      opacity:   0,
+    });
+    const logoSideMat = new THREE.MeshStandardMaterial({
+      color:     0x050505,
+      roughness: 0.70,
+      metalness: 0.05,
+      transparent: true,
+      opacity:   0,
+    });
+
+    const circleGeo  = tubeFromCurve(arcPoints(100, 100, 82, 292, 608, 160), STROKE_RAD, 190);
+    const circleMesh = new THREE.Mesh(circleGeo, logoTopMat.clone());
+    circleMesh.castShadow = circleMesh.receiveShadow = true;
+    logoGroup.add(circleMesh);
+
+    const vMesh = new THREE.Mesh(
+      tubeFromPolyline([[69, 24], [100, 104], [131, 24]], STROKE_RAD, 100),
+      logoTopMat.clone()
+    );
+    vMesh.castShadow = vMesh.receiveShadow = true;
+    logoGroup.add(vMesh);
+
+    const slicePath = new THREE.CurvePath();
+    slicePath.add(new THREE.QuadraticBezierCurve3(svgPoint(74, 16), svgPoint(100, 10), svgPoint(126, 16)));
+    slicePath.add(new THREE.LineCurve3(svgPoint(126, 16), svgPoint(100, 52)));
+    slicePath.add(new THREE.LineCurve3(svgPoint(100, 52), svgPoint(74, 16)));
+    const sliceMesh = new THREE.Mesh(
+      new THREE.TubeGeometry(slicePath, 90, STROKE_RAD, 20, false),
+      logoTopMat.clone()
+    );
+    sliceMesh.castShadow = sliceMesh.receiveShadow = true;
+    sliceMesh.position.y = 0.006;
+    logoGroup.add(sliceMesh);
+
+    function makeDepthClone(mesh, yOff) {
+      const c = new THREE.Mesh(mesh.geometry, logoSideMat.clone());
+      c.position.y = yOff;
+      c.castShadow = c.receiveShadow = true;
+      logoGroup.add(c);
+      return c;
+    }
+    const circleDepth = makeDepthClone(circleMesh, -0.055);
+    const vDepth      = makeDepthClone(vMesh,      -0.055);
+    const sliceDepth  = makeDepthClone(sliceMesh,  -0.049);
+
+    const logoMeshes = [circleMesh, vMesh, sliceMesh, circleDepth, vDepth, sliceDepth];
+
+    // ── Sparks — warm white only ──────────────────────────────────────────────
+    const sparks = Array.from({ length: 16 }, () => {
+      const m = new THREE.Mesh(
+        new THREE.SphereGeometry(0.022, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffddb0, transparent: true, opacity: 0 })
+      );
+      nozzleGroup.add(m);
+      return { mesh: m, life: Math.random() * 0.4, maxLife: 0.3 + Math.random() * 0.18, velocity: new THREE.Vector3() };
+    });
+
+    // ── Extrusion dot trail ───────────────────────────────────────────────────
+    const TRAIL_MAX   = 200;
+    const trailPos    = new Float32Array(TRAIL_MAX * 3);
+    const trailCol    = new Float32Array(TRAIL_MAX * 3);
+    const trailGeo    = new THREE.BufferGeometry();
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3).setUsage(THREE.DynamicDrawUsage));
+    trailGeo.setAttribute('color',    new THREE.BufferAttribute(trailCol, 3).setUsage(THREE.DynamicDrawUsage));
+    trailGeo.setDrawRange(0, 0);
+    const trailMat    = new THREE.PointsMaterial({ size: 0.038, vertexColors: true, transparent: true, opacity: 0.7, sizeAttenuation: true });
+    const trailPts    = new THREE.Points(trailGeo, trailMat);
+    scene.add(trailPts);
+    let trailHead = 0, trailCount = 0, trailAccum = 0;
+    const trailLastPos = new THREE.Vector3();
+
+    // ── Nozzle path ───────────────────────────────────────────────────────────
+    const BED_TOP_Y   =  0.105;
+    const TIP_LOCAL_Y = -2.0;
+    const PRINT_Y     =  BED_TOP_Y + 0.055 - TIP_LOCAL_Y;
+    const TRAVEL_Y    =  PRINT_Y + 0.44;
+
+    function nozzlePoint(sx, sy, y = PRINT_Y) {
+      const p = svgPoint(sx, sy);
+      return new THREE.Vector3(p.x, y, p.z);
+    }
+
+    const waypoints = [];
+    waypoints.push(nozzlePoint(126, 22, TRAVEL_Y));
+    waypoints.push(nozzlePoint(126, 22, PRINT_Y));
+    arcPoints(100, 100, 82, 292, 608, 100).forEach(p => waypoints.push(new THREE.Vector3(p.x, PRINT_Y, p.z)));
+    waypoints.push(nozzlePoint(69, 24, TRAVEL_Y));
+    waypoints.push(nozzlePoint(69, 24, PRINT_Y));
+    [[69,24],[84,64],[100,104],[116,64],[131,24]].forEach(([sx,sy]) => waypoints.push(nozzlePoint(sx,sy,PRINT_Y)));
+    waypoints.push(nozzlePoint(74, 16, TRAVEL_Y));
+    waypoints.push(nozzlePoint(74, 16, PRINT_Y));
+    [[74,16],[100,10],[126,16],[100,52],[74,16]].forEach(([sx,sy]) => waypoints.push(nozzlePoint(sx,sy,PRINT_Y)));
+    waypoints.push(nozzlePoint(150, -10, TRAVEL_Y));
+
+    const nozzleCurve = new THREE.CatmullRomCurve3(waypoints, false, 'catmullrom', 0.12);
+
+    // ── Camera rig — smoothly damped ──────────────────────────────────────────
+    // We never snap the camera. Every camera property is lerped or smoothstepped.
+
+    const camPosA  = new THREE.Vector3(4.8, 2.35, 7.2);   // low-angle tracking
+    const camTarA  = new THREE.Vector3(0.0, 0.7,  0.0);
+    const camPosB  = new THREE.Vector3(0.0, 10.8, 0.35);  // bird's-eye reveal
+    const camTarB  = new THREE.Vector3(0.0, 0.05, 0.0);
+
+    // Smoothly interpolated camera state
+    const camPosCurrent = camPosA.clone();
+    const camTarCurrent = camTarA.clone();
+
+    const T = {
+      printEnd:    4.35,
+      liftStart:   3.8,
+      liftEnd:     6.2,
+      done:        13.2,
+    };
+
+    // Logo stagger — same window as original
+    const logoReveal = [
+      { mesh: circleMesh, start: 0.45, end: 2.55 },
+      { mesh: circleDepth,start: 0.55, end: 2.65 },
+      { mesh: vMesh,      start: 2.05, end: 3.15 },
+      { mesh: vDepth,     start: 2.15, end: 3.25 },
+      { mesh: sliceMesh,  start: 3.05, end: 4.0  },
+      { mesh: sliceDepth, start: 3.15, end: 4.1  },
+    ];
+
+    // ── Easing helpers ────────────────────────────────────────────────────────
+    const clamp01     = v => Math.max(0, Math.min(1, v));
+    const smoothstep  = t => t * t * (3 - 2 * t);
+    const smootherstep = t => t * t * t * (t * (t * 6 - 15) + 10);  // C2-continuous
+
+    // ── Resize ────────────────────────────────────────────────────────────────
+    function onResize() {
+      const w = window.innerWidth, h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      RT.setSize(w, h);
+      RT_BLOOM.setSize(Math.floor(w / 3), Math.floor(h / 3));
+      blurHMat.uniforms.uRes.value.set(Math.floor(w / 3), Math.floor(h / 3));
+    }
+
+    // ── Animate ───────────────────────────────────────────────────────────────
+    function animate() {
+      if (disposed) return;
+      frameId = requestAnimationFrame(animate);
+
+      const delta   = Math.min(clock.getDelta(), 0.05);  // cap delta to avoid huge jumps on tab-switch
+      const elapsed = (performance.now() - startTime) / 1000;
+
+      // ── Nozzle movement ──
+      // smootherstep gives a buttery eased-in / eased-out print motion
+      const printT  = clamp01(elapsed / T.printEnd);
+      const pathT   = smootherstep(printT);
+      nozzleGroup.position.copy(nozzleCurve.getPointAt(Math.min(pathT, 0.9999)));
+
+      // Look-ahead for orientation — larger step = smoother but lags corners.
+      // 0.008 is the sweet spot for this curve density.
+      const aheadT = Math.min(pathT + 0.008, 0.9999);
+      const lookPt = nozzleCurve.getPointAt(aheadT);
+      nozzleGroup.lookAt(lookPt.x, nozzleGroup.position.y, lookPt.z);
+
+      // ── Logo fade-in ──
+      logoReveal.forEach(({ mesh, start, end }) => {
+        mesh.material.opacity = smoothstep(clamp01((elapsed - start) / (end - start)));
+      });
+
+      // ── Filament + nozzle glow ──
+      const tipDist    = Math.abs(nozzleGroup.position.y - PRINT_Y);
+      const isPrinting = tipDist < 0.55 && elapsed < T.printEnd && elapsed > 0.5;
+
+      if (isPrinting) {
+        filament.material.opacity = 0.88;
+        filament.scale.y = Math.max(0.08, 1 - tipDist * 1.8);
+        // Gentle pulse — low frequency so it doesn't look choppy
+        nozzleGlow.intensity = 2.8 + Math.sin(elapsed * 11) * 0.55;
+        nozzleGlow.position.copy(nozzleGroup.position);
+        nozzleGlow.position.y -= 0.15;
+      } else {
+        filament.material.opacity = Math.max(0, filament.material.opacity - delta * 4);
+        // Smooth glow fade-out — exponential decay, not instant cut
+        nozzleGlow.intensity = Math.max(0, nozzleGlow.intensity - delta * 9);
+      }
+
+      // ── Sparks ──
+      // Only emit during active printing, fewer sparks, white only
+      sparks.forEach((sp, idx) => {
+        sp.life += delta;
+        if (sp.life > sp.maxLife) {
+          sp.life = 0;
+          sp.maxLife = 0.25 + Math.random() * 0.18;
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 0.035 + Math.random() * 0.04;
+          sp.velocity.set(Math.cos(angle) * speed, 0.025 + Math.random() * 0.05, Math.sin(angle) * speed);
+          sp.mesh.position.set((Math.random() - 0.5) * 0.07, -1.58, (Math.random() - 0.5) * 0.07);
+        }
+        const active = isPrinting && (idx % 3 === Math.floor(elapsed * 9) % 3);
+        if (active) {
+          sp.mesh.position.addScaledVector(sp.velocity, delta * 55);
+          sp.velocity.y -= delta * 0.22;  // gentle gravity
+          sp.mesh.material.opacity = (1 - sp.life / sp.maxLife) * 0.82;
+        } else {
+          sp.mesh.material.opacity = Math.max(0, sp.mesh.material.opacity - delta * 8);
+        }
+      });
+
+      // ── Extrusion trail ──
+      trailAccum += delta;
+      if (isPrinting && trailAccum > 0.014) {
+        trailAccum = 0;
+        const wp = new THREE.Vector3(nozzleGroup.position.x, BED_TOP_Y + 0.062, nozzleGroup.position.z);
+        if (wp.distanceTo(trailLastPos) > 0.018) {
+          trailLastPos.copy(wp);
+          const i = trailHead * 3;
+          trailPos[i] = wp.x; trailPos[i+1] = wp.y; trailPos[i+2] = wp.z;
+          // Monochrome: hot = near white, cooled = dark grey
+          const age = trailCount / TRAIL_MAX;
+          const brightness = 0.85 - age * 0.6;
+          trailCol[i] = brightness; trailCol[i+1] = brightness; trailCol[i+2] = brightness;
+          trailHead  = (trailHead + 1) % TRAIL_MAX;
+          trailCount = Math.min(trailCount + 1, TRAIL_MAX);
+          trailGeo.setDrawRange(0, trailCount);
+          trailGeo.attributes.position.needsUpdate = true;
+          trailGeo.attributes.color.needsUpdate    = true;
+        }
+      }
+
+      // Clean up temporary extrusion dots after the printed logo is complete.
+      // Prevents any stray center shaft/artifact during the final hold.
+      if (elapsed > T.printEnd + 0.25) {
+        trailMat.opacity = Math.max(0, trailMat.opacity - delta * 1.8);
+      }
+
+      // ── Camera — fully damped, never snaps ──
+      let targetPos, targetLook;
+
+      if (elapsed < T.liftStart) {
+        // Act 1: low-angle follow cam. Gently biases toward the nozzle tip.
+        const nozzleFocus = new THREE.Vector3(
+          nozzleGroup.position.x,
+          Math.max(0.45, nozzleGroup.position.y - 1.85),
+          nozzleGroup.position.z
+        );
+        targetPos  = camPosA;
+        // Mix between fixed look-target and nozzle focus — 40% nozzle bias
+        targetLook = new THREE.Vector3().lerpVectors(camTarA, nozzleFocus, 0.4);
+      } else {
+        // Act 2+: crane lift to bird's-eye.
+        // smootherstep (C2) ensures the lift starts and ends without any pop.
+        const lt = smootherstep(clamp01((elapsed - T.liftStart) / (T.liftEnd - T.liftStart)));
+        targetPos  = new THREE.Vector3().lerpVectors(camPosA, camPosB, lt);
+        targetLook = new THREE.Vector3().lerpVectors(camTarA, camTarB, lt);
+      }
+
+      // Exponential smooth-damp — framerate-independent, always converges
+      // alpha = 1 - e^(-stiffness * delta)
+      const stiffness = 5.0;
+      const alpha     = 1 - Math.exp(-stiffness * delta);
+      camPosCurrent.lerp(targetPos,  alpha);
+      camTarCurrent.lerp(targetLook, alpha);
+      camera.position.copy(camPosCurrent);
+      camera.lookAt(camTarCurrent);
+
+      // ── Post-processing fade ──
+      // Fade in over first 0.9 s, fade out over last 0.5 s
+      const fadeIn  = smoothstep(clamp01(elapsed / 0.9));
+      const fadeOut = smoothstep(clamp01(1 - (elapsed - (T.done - 0.5)) / 0.5));
+      compositeMat.uniforms.uFade.value = fadeIn * (elapsed > T.done - 0.5 ? fadeOut : 1);
+      compositeMat.uniforms.uTime.value = elapsed;
+
+      // ── Render pipeline ──
+      // Pass 1: full scene → HDR target
+      renderer.setRenderTarget(RT);
+      renderer.render(scene, camera);
+
+      // Pass 2: threshold extract → bloom buffer
+      postScene.add(bloomExtractQuad);
+      bloomExtractMat.uniforms.tDiffuse.value = RT.texture;
+      renderer.setRenderTarget(RT_BLOOM);
+      renderer.render(postScene, postCam);
+      postScene.remove(bloomExtractQuad);
+
+      // Pass 3: blur bloom (horizontal)
+      postScene.add(blurQuad);
+      blurHMat.uniforms.tDiffuse.value = RT_BLOOM.texture;
+      blurHMat.uniforms.uDir.value.set(1, 0);
+      renderer.setRenderTarget(RT_BLOOM);
+      renderer.render(postScene, postCam);
+      postScene.remove(blurQuad);
+
+      // Pass 4: composite to screen
+      postScene.add(compositeQuad);
+      compositeMat.uniforms.tScene.value = RT.texture;
+      compositeMat.uniforms.tBloom.value = RT_BLOOM.texture;
+      renderer.setRenderTarget(null);
+      renderer.render(postScene, postCam);
+      postScene.remove(compositeQuad);
+
+      if (elapsed > T.done) {
+        onComplete?.();
+        disposed = true;
+      }
+    }
+
+    window.addEventListener('resize', onResize);
+    onResize();
+    animate();
+
+    return () => {
+      disposed = true;
+      window.removeEventListener('resize', onResize);
+      cancelAnimationFrame(frameId);
+      logoMeshes.forEach(m => { m.geometry?.dispose(); m.material?.dispose(); });
+      trailGeo.dispose();
+      RT.dispose(); RT_BLOOM.dispose();
+      renderer.dispose();
+    };
+  }, [onComplete]);
+
+  return (
+    <div className="three-intro" aria-hidden="true">
+      <canvas id="intro-canvas" ref={canvasRef} />
+      <div className="intro-logo-morph">
+        <BrandLogo />
+      </div>
+    </div>
+  );
+}
+
+
+function BrandLogo({ className = '' }) {
+  return (
+    <span className={`logo-mark ${className}`} aria-hidden="true">
+      <svg viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M80 60 A66 66 0 1 0 120 60" stroke="currentColor" strokeWidth="13" fill="none" strokeLinecap="round" />
+        <path d="M80 60 L100 128 L120 60" stroke="currentColor" strokeWidth="13" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M76 16 Q100 8 124 16 L100 52 Z" stroke="currentColor" strokeWidth="13" fill="none" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
+
+function Header() {
+  return (
+    <header className="site-header">
+      <a className="brand" href="#top" aria-label="3D-Pi home">
+        <BrandLogo />
+        <span>3D-Pi</span>
+      </a>
+      <nav>
+        {nav.map((item) => <a key={item} href={`#${item.toLowerCase()}`}>{item}</a>)}
+      </nav>
+      <a className="header-cta" href="#demo">Request demo <ArrowRight size={16} /></a>
+    </header>
+  );
+}
+
+function Hero() {
+  return (
+    <section id="top" className="hero section-pad">
+      <div className="hero-orbit" />
+      <div className="hero-copy reveal-up">
+        <p className="eyebrow">Software house & product studio</p>
+        <h1>Build smarter software for serious business workflows.</h1>
+        <p className="hero-lede">3D-Pi is a software house that designs and delivers premium business software — including a dedicated 3D printing management platform as one of its flagship projects.</p>
+        <div className="hero-actions">
+          <a className="primary-btn" href="#demo">Request a demo <ArrowRight size={18} /></a>
+          <a className="secondary-btn" href="#platform">Explore the platform <ChevronRight size={18} /></a>
+        </div>
+      </div>
+      <div className="hero-art reveal-up delay-1">
+        <div className="logo-sculpture">
+          <BrandLogo className="sculpture-logo" />
+          <span className="slice-shadow" />
+        </div>
+        <div className="hero-dashboard glass-card">
+          <div className="dash-line"><span>Margin intelligence</span><b>41.6%</b></div>
+          <div className="dash-meter"><i style={{width: '78%'}} /></div>
+          <div className="stat-row">
+            <MiniStat icon={Globe2} label="Live products" value="12" />
+            <MiniStat icon={Clock3} label="Avg quote" value="11m" />
+            <MiniStat icon={Boxes} label="Active modules" value="38" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MiniStat({ icon: Icon, label, value }) {
+  return <div className="mini-stat"><Icon size={18} /><span>{label}</span><strong>{value}</strong></div>;
+}
+
+function LogoStrip() {
+  return (
+    <section className="logo-strip scroll-fade">
+      <span>Built for</span>
+      <b>Startups</b><b>Growing Businesses</b><b>Operations Teams</b><b>3D Printing Workflows</b>
+    </section>
+  );
+}
+
+function Platform() {
+  return (
+    <section id="platform" className="platform section-pad">
+      <div className="section-heading scroll-fade">
+        <p className="eyebrow dark">Platform</p>
+        <h2>A single studio for software that moves businesses forward.</h2>
+        <p>Every product is designed around operational clarity: clean workflows, reliable data, visible bottlenecks, and fast executive reporting.</p>
+      </div>
+      <div className="module-grid">
+        {modules.map(({ icon: Icon, title, text }, index) => (
+          <article className="module-card scroll-fade" style={{'--delay': `${index * 90}ms`}} key={title}>
+            <Icon size={28} />
+            <h3>{title}</h3>
+            <p>{text}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StrategyBand() {
+  return (
+    <section className="strategy-band">
+      <div className="scroll-fade">
+        <p className="eyebrow">Measured outcomes</p>
+        <h2>Premium software for teams that cannot afford guesswork.</h2>
+      </div>
+      <div className="metric-grid">
+        {metrics.map(([value, label], index) => <div className="metric scroll-fade" style={{'--delay': `${index * 90}ms`}} key={label}><strong>{value}</strong><span>{label}</span></div>)}
+      </div>
+    </section>
+  );
+}
+
+function Solutions() {
+  return (
+    <section id="solutions" className="solutions section-pad">
+      <div className="split-copy scroll-fade">
+        <p className="eyebrow dark">Solutions</p>
+        <h2>For operators scaling from manual work to intelligent systems.</h2>
+        <p>3D-Pi builds software that gives founders, managers, and teams a shared source of truth — from internal dashboards to specialized platforms like its 3D printing management product.</p>
+      </div>
+      <div className="solution-list">
+        {solutions.map((item, index) => <div className="scroll-fade" style={{'--delay': `${index * 65}ms`}} key={item}><CheckCircle2 size={19} /> {item}</div>)}
+      </div>
+    </section>
+  );
+}
+
+function DashboardPreview() {
+  return (
+    <section className="dashboard section-pad">
+      <div className="dashboard-shell scroll-fade">
+        <aside>
+          <div className="brand small"><BrandLogo /><span>3D-Pi</span></div>
+          {['Dashboard','Inventory','Pricing','Orders','History','Reports','Settings'].map((x, i) => <span className={i === 0 ? 'active side-link' : 'side-link'} key={x}>{x}</span>)}
+        </aside>
+        <div className="dash-main">
+          <div className="dash-head">
+            <div><span className="tiny-label">Executive dashboard</span><h3>Operational command center</h3></div>
+            <button>Export report</button>
+          </div>
+          <div className="dash-cards">
+            <DashCard icon={PieChart} label="Gross margin" value="41.6%" />
+            <DashCard icon={Factory} label="Printer utilization" value="78%" />
+            <DashCard icon={FileText} label="Quotes pending" value="14" />
+          </div>
+          <div className="table-card">
+            <div className="table-row head"><span>Order</span><span>Material</span><span>Status</span><span>Margin</span></div>
+            {[
+              ['A-1042','PLA Matte Black','Printing','38%'],
+              ['A-1043','PETG Clear','Quoted','44%'],
+              ['A-1044','Resin Grey','Post-process','51%']
+            ].map((row) => <div className="table-row" key={row[0]}>{row.map((x) => <span key={x}>{x}</span>)}</div>)}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DashCard({ icon: Icon, label, value }) {
+  return <div className="dash-card"><Icon size={21} /><span>{label}</span><strong>{value}</strong></div>;
+}
+
+function Insights() {
+  return (
+    <section id="insights" className="insights section-pad">
+      <div className="section-heading left scroll-fade">
+        <p className="eyebrow dark">Insights</p>
+        <h2>Thinking for modern software-driven teams.</h2>
+      </div>
+      <div className="insight-grid">
+        {insights.map((item, index) => <article className="insight-card scroll-fade" style={{'--delay': `${index * 90}ms`}} key={item.title}><span>{item.label}</span><h3>{item.title}</h3><p>{item.meta} <ArrowRight size={15} /></p></article>)}
+      </div>
+    </section>
+  );
+}
+
+function CTA() {
+  return (
+    <section id="demo" className="cta scroll-fade">
+      <BrandLogo className="cta-logo" />
+      <h2>Give your business software that feels built for it.</h2>
+      <p>Dashboards, workflows, reporting, automation, and specialized products — including 3D printing software — built to feel premium from the first screen.</p>
+      <a className="primary-btn light" href="mailto:sales@3d-pi.example">Request demo <ArrowRight size={18} /></a>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer>
+      <div className="brand"><BrandLogo /><span>3D-Pi</span></div>
+      <p>Premium front-end concept for a software house building business platforms, internal tools, and a dedicated 3D printing software product.</p>
+      <div><a href="#platform">Platform</a><a href="#solutions">Solutions</a><a href="#insights">Insights</a><a href="#demo">Demo</a></div>
+    </footer>
+  );
+}
+
+createRoot(document.getElementById('root')).render(<App />);
