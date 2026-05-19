@@ -1,0 +1,1 @@
+Python FastAPI back-end root. This should contain project metadata and setup files later, such as pyproject.toml, requirements.txt, alembic.ini, .env.example, Dockerfile, and README notes for running the API.
