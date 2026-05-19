@@ -398,3 +398,400 @@ nav a:after{background:var(--blue)}
 .dash-card,.table-card{border-color:rgba(0,182,248,.22)}
 .cta{background:radial-gradient(circle at 50% 0%,rgba(0,182,248,.35),transparent 34%),#000000;box-shadow:0 40px 110px rgba(0,182,248,.24)}
 @keyframes pulseCyan{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:.9;transform:scale(1.06)}}
+
+/* Premium video-to-navbar handoff override */
+.video-intro{
+  --handoff-start-w:clamp(160px,16.7vw,320px);
+  --handoff-start-h:clamp(185px,19.6vw,376px);
+  --handoff-start-top:54%;
+  --handoff-target-left:max(38px,calc((100vw - 1120px) / 2 + 22px));
+  --handoff-target-top:27px;
+  --handoff-target-w:42px;
+  --handoff-target-h:46px;
+}
+.video-intro::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:121;
+  pointer-events:none;
+  opacity:0;
+  background:
+    radial-gradient(circle at 50% 54%,rgba(255,255,255,.64),rgba(255,255,255,0) 24%),
+    linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.86));
+  transition:opacity 1.05s ease;
+}
+.video-intro.is-handoff::after{opacity:1;}
+.video-intro.is-handoff .intro-video{
+  opacity:.18;
+  filter:blur(16px) saturate(.9);
+  transform:scale(1.018);
+  transition:opacity 1.05s ease,filter 1.05s ease,transform 1.9s cubic-bezier(.19,1,.22,1);
+}
+.video-intro .intro-logo-morph{
+  left:50%;
+  top:var(--handoff-start-top);
+  width:var(--handoff-start-w);
+  height:var(--handoff-start-h);
+  transform:translate(-50%,-50%) scale(1);
+  filter:drop-shadow(0 22px 34px rgba(0,0,0,.16)) drop-shadow(0 0 26px rgba(0,182,248,.18));
+  will-change:left,top,width,height,transform,filter,opacity;
+}
+.video-intro.is-handoff .intro-logo-morph{
+  animation:premiumVideoLogoToNav 2.25s cubic-bezier(.19,1,.22,1) forwards!important;
+}
+@keyframes premiumVideoLogoToNav{
+  0%{
+    opacity:1;
+    left:50%;
+    top:var(--handoff-start-top);
+    width:var(--handoff-start-w);
+    height:var(--handoff-start-h);
+    transform:translate(-50%,-50%) scale(1);
+    filter:drop-shadow(0 22px 34px rgba(0,0,0,.16)) drop-shadow(0 0 26px rgba(0,182,248,.18));
+  }
+  18%{
+    opacity:1;
+    left:50%;
+    top:calc(var(--handoff-start-top) - 1.4%);
+    width:calc(var(--handoff-start-w) * 1.035);
+    height:calc(var(--handoff-start-h) * 1.035);
+    transform:translate(-50%,-50%) scale(1);
+    filter:drop-shadow(0 28px 46px rgba(0,0,0,.14)) drop-shadow(0 0 34px rgba(0,182,248,.24));
+  }
+  62%{
+    opacity:1;
+    left:calc((50% + var(--handoff-target-left)) / 2);
+    top:20%;
+    width:112px;
+    height:124px;
+    transform:translate(-50%,-50%) scale(1);
+    filter:drop-shadow(0 18px 30px rgba(0,0,0,.12)) drop-shadow(0 0 22px rgba(0,182,248,.18));
+  }
+  100%{
+    opacity:1;
+    left:var(--handoff-target-left);
+    top:var(--handoff-target-top);
+    width:var(--handoff-target-w);
+    height:var(--handoff-target-h);
+    transform:translate(0,0) scale(1);
+    filter:drop-shadow(0 0 14px rgba(0,182,248,.35)) drop-shadow(0 8px 13px rgba(0,0,0,.08));
+  }
+}
+.homepage.intro-active.intro-revealing{
+  transition:opacity 1.25s ease .2s,transform 1.25s cubic-bezier(.19,1,.22,1) .2s,filter 1.25s ease .2s;
+}
+.homepage.intro-active.intro-revealing .site-header{
+  animation:premiumHeaderSettle 1.35s cubic-bezier(.19,1,.22,1) .45s both;
+}
+@keyframes premiumHeaderSettle{
+  from{opacity:0;transform:translateX(-50%) translateY(-12px) scale(.985);filter:blur(8px);}
+  to{opacity:1;transform:translateX(-50%) translateY(0) scale(1);filter:blur(0);}
+}
+@media (max-width:760px){
+  .video-intro{
+    --handoff-start-w:clamp(130px,34vw,190px);
+    --handoff-start-h:clamp(150px,39.7vw,222px);
+    --handoff-start-top:54%;
+    --handoff-target-left:32px;
+    --handoff-target-top:21px;
+    --handoff-target-w:36px;
+    --handoff-target-h:40px;
+  }
+  @keyframes premiumVideoLogoToNav{
+    0%,18%{
+      opacity:1;
+      left:50%;
+      top:var(--handoff-start-top);
+      width:var(--handoff-start-w);
+      height:var(--handoff-start-h);
+      transform:translate(-50%,-50%) scale(1);
+      filter:drop-shadow(0 22px 34px rgba(0,0,0,.16)) drop-shadow(0 0 26px rgba(0,182,248,.18));
+    }
+    62%{
+      opacity:1;
+      left:34%;
+      top:17%;
+      width:92px;
+      height:102px;
+      transform:translate(-50%,-50%) scale(1);
+      filter:drop-shadow(0 18px 30px rgba(0,0,0,.12)) drop-shadow(0 0 22px rgba(0,182,248,.18));
+    }
+    100%{
+      opacity:1;
+      left:var(--handoff-target-left);
+      top:var(--handoff-target-top);
+      width:var(--handoff-target-w);
+      height:var(--handoff-target-h);
+      transform:translate(0,0) scale(1);
+      filter:drop-shadow(0 0 14px rgba(0,182,248,.35)) drop-shadow(0 8px 13px rgba(0,0,0,.08));
+    }
+  }
+}
+
+/* Maro correction: match the final video frame, then glide into a larger navbar mark */
+.logo-mark{width:50px;height:55px;}
+.brand{gap:12px;}
+.site-header{height:72px;}
+.cta-logo{width:96px;height:106px;}
+.sculpture-logo{width:82%;height:82%;}
+
+.homepage.intro-active .site-header .brand .logo-mark{opacity:0;}
+.homepage.intro-active.intro-revealing .site-header .brand .logo-mark{
+  opacity:0;
+  transition:opacity .22s ease 2.15s;
+}
+.homepage:not(.intro-active) .site-header .brand .logo-mark{opacity:1;}
+
+.video-intro{
+  --handoff-start-left:54%;
+  --handoff-start-top:60.5%;
+  --handoff-start-w:clamp(285px,24vw,430px);
+  --handoff-start-h:clamp(315px,26.5vw,475px);
+  --handoff-target-left:max(38px,calc((100vw - 1120px) / 2 + 22px));
+  --handoff-target-top:25px;
+  --handoff-target-w:50px;
+  --handoff-target-h:55px;
+}
+.video-intro::after{
+  background:
+    radial-gradient(circle at var(--handoff-start-left) var(--handoff-start-top),rgba(255,255,255,.22),rgba(255,255,255,0) 24%),
+    linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.72));
+  transition:opacity 1.35s ease .12s;
+}
+.video-intro.is-handoff .intro-video{
+  opacity:.34;
+  filter:blur(8px) saturate(.96);
+  transform:scale(1.008);
+  transition:opacity 1.35s ease .12s,filter 1.35s ease .12s,transform 2.35s cubic-bezier(.2,1,.18,1);
+}
+.video-intro .intro-logo-morph{
+  left:var(--handoff-start-left);
+  top:var(--handoff-start-top);
+  width:var(--handoff-start-w);
+  height:var(--handoff-start-h);
+  opacity:0;
+  transform:translate(-50%,-50%) scale(1);
+  filter:drop-shadow(0 24px 34px rgba(0,0,0,.13));
+}
+.video-intro.is-handoff .intro-logo-morph{
+  animation:premiumLogoFromFrameToNavV2 2.35s cubic-bezier(.2,1,.18,1) forwards!important;
+}
+@keyframes premiumLogoFromFrameToNavV2{
+  0%{
+    opacity:0;
+    left:var(--handoff-start-left);
+    top:var(--handoff-start-top);
+    width:var(--handoff-start-w);
+    height:var(--handoff-start-h);
+    transform:translate(-50%,-50%) scale(.995);
+    filter:drop-shadow(0 24px 34px rgba(0,0,0,.13));
+  }
+  10%{
+    opacity:1;
+    left:var(--handoff-start-left);
+    top:var(--handoff-start-top);
+    width:var(--handoff-start-w);
+    height:var(--handoff-start-h);
+    transform:translate(-50%,-50%) scale(1);
+  }
+  34%{
+    opacity:1;
+    left:53%;
+    top:54%;
+    width:calc(var(--handoff-start-w) * .78);
+    height:calc(var(--handoff-start-h) * .78);
+    transform:translate(-50%,-50%) scale(1);
+    filter:drop-shadow(0 26px 38px rgba(0,0,0,.12)) drop-shadow(0 0 26px rgba(0,182,248,.16));
+  }
+  72%{
+    opacity:1;
+    left:calc((var(--handoff-target-left) + 50vw) / 2.05);
+    top:18%;
+    width:118px;
+    height:130px;
+    transform:translate(-50%,-50%) scale(1);
+    filter:drop-shadow(0 16px 26px rgba(0,0,0,.10)) drop-shadow(0 0 20px rgba(0,182,248,.18));
+  }
+  100%{
+    opacity:1;
+    left:var(--handoff-target-left);
+    top:var(--handoff-target-top);
+    width:var(--handoff-target-w);
+    height:var(--handoff-target-h);
+    transform:translate(0,0) scale(1);
+    filter:drop-shadow(0 0 14px rgba(0,182,248,.35)) drop-shadow(0 8px 13px rgba(0,0,0,.08));
+  }
+}
+@media (max-width:760px){
+  .logo-mark{width:42px;height:47px;}
+  .site-header{height:66px;}
+  .video-intro{
+    --handoff-start-left:54%;
+    --handoff-start-top:60.5%;
+    --handoff-start-w:38vw;
+    --handoff-start-h:42vw;
+    --handoff-target-left:30px;
+    --handoff-target-top:20px;
+    --handoff-target-w:42px;
+    --handoff-target-h:47px;
+  }
+}
+
+/* Size correction: match the larger logo in the final video frame */
+.video-intro{
+  --handoff-start-w:clamp(405px,34vw,650px);
+  --handoff-start-h:clamp(448px,37.5vw,718px);
+}
+@media (max-width:760px){
+  .video-intro{
+    --handoff-start-w:54vw;
+    --handoff-start-h:60vw;
+  }
+}
+
+/* Final handoff calibration: logo asset is extracted from the last video frame */
+.video-intro{
+  --handoff-start-left:50.2%;
+  --handoff-start-top:54.0%;
+  --handoff-start-w:19.6vw;
+  --handoff-start-h:22.7vw;
+  --handoff-target-left:max(38px,calc((100vw - 1120px) / 2 + 22px));
+  --handoff-target-top:24px;
+  --handoff-target-w:52px;
+  --handoff-target-h:60px;
+}
+.video-intro .intro-logo-morph{
+  left:var(--handoff-start-left);
+  top:var(--handoff-start-top);
+  width:var(--handoff-start-w);
+  height:var(--handoff-start-h);
+  opacity:0;
+  transform:translate(-50%,-50%) scale(1);
+  filter:none;
+}
+.video-intro.is-handoff .intro-video{
+  opacity:.22;
+  filter:blur(10px) saturate(.92);
+  transform:scale(1.01);
+  transition:opacity 1.05s ease,filter 1.05s ease,transform 2.4s cubic-bezier(.2,1,.18,1);
+}
+.video-intro.is-handoff .intro-logo-morph{
+  animation:logoExactFrameToNavbar 2.55s cubic-bezier(.2,1,.18,1) forwards!important;
+}
+@keyframes logoExactFrameToNavbar{
+  0%,24%{
+    opacity:1;
+    left:var(--handoff-start-left);
+    top:var(--handoff-start-top);
+    width:var(--handoff-start-w);
+    height:var(--handoff-start-h);
+    transform:translate(-50%,-50%) scale(1);
+    filter:none;
+  }
+  58%{
+    opacity:1;
+    left:34%;
+    top:18%;
+    width:132px;
+    height:153px;
+    transform:translate(-50%,-50%) scale(1);
+    filter:drop-shadow(0 18px 28px rgba(0,0,0,.10)) drop-shadow(0 0 18px rgba(0,182,248,.12));
+  }
+  100%{
+    opacity:1;
+    left:var(--handoff-target-left);
+    top:var(--handoff-target-top);
+    width:var(--handoff-target-w);
+    height:var(--handoff-target-h);
+    transform:translate(0,0) scale(1);
+    filter:drop-shadow(0 0 14px rgba(0,182,248,.35)) drop-shadow(0 8px 13px rgba(0,0,0,.08));
+  }
+}
+.logo-mark{width:52px;height:60px;}
+.brand.small .logo-mark{width:48px;height:55px;}
+@media (max-width:760px){
+  .video-intro{
+    --handoff-start-left:50.2%;
+    --handoff-start-top:54.0%;
+    --handoff-start-w:19.6vw;
+    --handoff-start-h:22.7vw;
+    --handoff-target-left:30px;
+    --handoff-target-top:18px;
+    --handoff-target-w:44px;
+    --handoff-target-h:51px;
+  }
+  .logo-mark{width:44px;height:51px;}
+}
+
+/* Final polish: keep exact logo locked while video fades, then move after the old frame is gone */
+.video-intro.is-handoff .intro-video{
+  opacity:0;
+  filter:blur(14px) saturate(.9);
+  transform:scale(1.012);
+  transition:opacity .48s ease,filter .48s ease,transform 1.4s cubic-bezier(.2,1,.18,1);
+}
+.video-intro.is-handoff .intro-logo-morph{
+  animation:logoExactFrameToNavbarV3 2.7s cubic-bezier(.2,1,.18,1) forwards!important;
+}
+@keyframes logoExactFrameToNavbarV3{
+  0%,42%{
+    opacity:1;
+    left:var(--handoff-start-left);
+    top:var(--handoff-start-top);
+    width:var(--handoff-start-w);
+    height:var(--handoff-start-h);
+    transform:translate(-50%,-50%) scale(1);
+    filter:none;
+  }
+  70%{
+    opacity:1;
+    left:34%;
+    top:18%;
+    width:132px;
+    height:153px;
+    transform:translate(-50%,-50%) scale(1);
+    filter:drop-shadow(0 18px 28px rgba(0,0,0,.10)) drop-shadow(0 0 18px rgba(0,182,248,.12));
+  }
+  100%{
+    opacity:1;
+    left:var(--handoff-target-left);
+    top:var(--handoff-target-top);
+    width:var(--handoff-target-w);
+    height:var(--handoff-target-h);
+    transform:translate(0,0) scale(1);
+    filter:drop-shadow(0 0 14px rgba(0,182,248,.35)) drop-shadow(0 8px 13px rgba(0,0,0,.08));
+  }
+}
+
+/* Maro final visual bump: bigger logo presence + stronger blue premium glow */
+:root{
+  --blue:#00B6F8;
+  --blue-strong:#009FE3;
+  --blue-soft:#DDF7FF;
+}
+.logo-mark{width:60px;height:69px;}
+.brand .logo-mark{width:58px;height:66px;}
+.brand.small .logo-mark{width:54px;height:62px;}
+.site-header{height:76px;background:rgba(245,252,255,.86);border-color:rgba(0,182,248,.52);box-shadow:0 18px 60px rgba(0,182,248,.22)}
+.brand{font-size:1.32rem;gap:13px;}
+.header-cta,.primary-btn{background:linear-gradient(135deg,#04c8ff,#00a9ef);box-shadow:0 18px 44px rgba(0,182,248,.38),0 0 0 1px rgba(255,255,255,.35) inset;}
+.secondary-btn{background:rgba(0,182,248,.13);border-color:rgba(0,182,248,.55);box-shadow:0 10px 30px rgba(0,182,248,.12)}
+.hero{background:radial-gradient(circle at 78% 20%,rgba(0,182,248,.35),transparent 32%),radial-gradient(circle at 24% 92%,rgba(0,182,248,.22),transparent 34%),linear-gradient(145deg,#ffffff,#dff7ff 72%,#f8fdff)}
+.hero-orbit,.hero-orbit:before,.hero-orbit:after{border-color:rgba(0,182,248,.33)}
+.logo-sculpture{width:min(470px,78vw);}
+.sculpture-logo{width:96%;height:96%;filter:drop-shadow(0 0 42px rgba(0,182,248,.55)) drop-shadow(0 32px 28px rgba(0,0,0,.20));}
+.logo-sculpture:before{inset:-7%;background:radial-gradient(circle,rgba(0,182,248,.34),rgba(0,182,248,.10) 42%,transparent 68%);filter:blur(26px);}
+.slice-shadow{background:rgba(0,182,248,.28);filter:blur(18px)}
+.hero-dashboard{box-shadow:0 28px 90px rgba(0,182,248,.26),0 20px 50px rgba(0,0,0,.08);border-color:rgba(0,182,248,.42)}
+.dash-meter{background:#aeeeff}.dash-meter i{background:linear-gradient(90deg,#00B6F8,#009FE3)}
+.module-card,.insight-card,.solution-list div{box-shadow:0 18px 54px rgba(0,182,248,.10),0 16px 45px rgba(0,0,0,.04)}
+.cta{background:radial-gradient(circle at 50% 0%,rgba(0,182,248,.48),transparent 36%),radial-gradient(circle at 8% 78%,rgba(0,182,248,.20),transparent 30%),#000000;}
+.video-intro{--handoff-target-w:60px;--handoff-target-h:69px;--handoff-target-top:20px;}
+@media (max-width:760px){
+  .logo-mark,.brand .logo-mark{width:50px;height:58px;}
+  .site-header{height:70px;}
+  .brand{font-size:1.16rem;}
+  .logo-sculpture{width:min(390px,82vw);}
+  .video-intro{--handoff-target-w:50px;--handoff-target-h:58px;--handoff-target-top:16px;}
+}
