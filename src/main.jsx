@@ -131,7 +131,7 @@ function WebsiteIntro({ onComplete, onHandoff }) {
     const unlock = window.setTimeout(() => {
       document.documentElement.classList.remove('intro-lock');
       document.body.classList.remove('intro-lock');
-    }, 2450);
+    }, 3000);
     return () => window.clearTimeout(unlock);
   }, [handoff]);
 
@@ -140,7 +140,7 @@ function WebsiteIntro({ onComplete, onHandoff }) {
     const done = window.setTimeout(() => {
       completedRef.current = true;
       onComplete?.();
-    }, 2850);
+    }, 3150);
     return () => window.clearTimeout(done);
   }, [handoff, onComplete]);
 
