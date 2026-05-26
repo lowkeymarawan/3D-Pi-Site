@@ -74,6 +74,18 @@ const solutions = [
   'Understand profit on every job'
 ];
 
+const workflowSteps = [
+  ['01', 'Quote', 'Turn material, machine time, labor, failure rate, finishing, and margin into a customer-ready price.'],
+  ['02', 'Plan', 'Assign printers, due dates, material batches, and production notes before the job hits the queue.'],
+  ['03', 'Produce', 'Track printing, post-processing, quality checks, delivery, and payment from one command center.']
+];
+
+const insights = [
+  ['Cost clarity', 'Know exactly where every pound, gram, hour, and margin point goes.'],
+  ['Inventory confidence', 'Catch low stock before a paid job gets blocked by missing filament or resin.'],
+  ['Operator focus', 'Give teams one workflow instead of scattered chats, sheets, and memory.']
+];
+
 function App() {
   const [introVisible, setIntroVisible] = useState(true);
   const [introRevealing, setIntroRevealing] = useState(false);
@@ -94,6 +106,7 @@ function App() {
         <StrategyBand />
         <Solutions />
         <DashboardPreview />
+        <Insights />
         <CTA />
         <Footer />
       </main>
@@ -105,6 +118,7 @@ function WebsiteIntro({ onComplete, onHandoff }) {
   const [handoff, setHandoff] = useState(false);
   const completedRef = useRef(false);
   const handoffStartedRef = useRef(false);
+  const logoRef = useRef(null);
 
   const beginHandoff = () => {
     if (handoffStartedRef.current) return;
@@ -131,17 +145,78 @@ function WebsiteIntro({ onComplete, onHandoff }) {
     const unlock = window.setTimeout(() => {
       document.documentElement.classList.remove('intro-lock');
       document.body.classList.remove('intro-lock');
-    }, 3000);
+    }, 3900);
     return () => window.clearTimeout(unlock);
   }, [handoff]);
 
   useEffect(() => {
     if (!handoff) return undefined;
+
+    const logo = logoRef.current;
+    let frameId;
+    const duration = 3450;
+    const hold = 420;
+    const startAt = performance.now();
+
+    const getGeometry = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const navLogo = document.querySelector('.site-header .brand .logo-mark');
+      const target = navLogo?.getBoundingClientRect();
+      const startW = Math.min(Math.max(vw * 0.196, 210), 380);
+      const startH = startW * 1.158;
+      return {
+        startX: vw * 0.502 - startW / 2,
+        startY: vh * 0.54 - startH / 2,
+        startW,
+        startH,
+        targetX: target?.left ?? Math.max(38, (vw - 1120) / 2 + 22),
+        targetY: target?.top ?? 20,
+        targetW: target?.width ?? 60,
+        targetH: target?.height ?? 69
+      };
+    };
+
+    const cubic = (a, b, c, d, t) => {
+      const mt = 1 - t;
+      return mt * mt * mt * a + 3 * mt * mt * t * b + 3 * mt * t * t * c + t * t * t * d;
+    };
+    const ease = (t) => 1 - Math.pow(1 - t, 3.2);
+
+    const draw = (now) => {
+      if (!logo) return;
+      const g = getGeometry();
+      const raw = Math.min(Math.max((now - startAt - hold) / (duration - hold), 0), 1);
+      const t = ease(raw);
+      const p1x = g.startX + 84;
+      const p1y = g.startY - 118;
+      const p2x = g.targetX + Math.min(430, window.innerWidth * 0.34);
+      const p2y = g.targetY + 148;
+      const x = cubic(g.startX, p1x, p2x, g.targetX, t);
+      const y = cubic(g.startY, p1y, p2y, g.targetY, t);
+      const scale = 1 + (g.targetW / g.startW - 1) * t;
+      const glow = Math.sin(Math.PI * raw);
+
+      logo.style.width = `${g.startW}px`;
+      logo.style.height = `${g.startH}px`;
+      logo.style.opacity = '1';
+      logo.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+      logo.style.filter = raw < 0.08
+        ? 'none'
+        : `drop-shadow(0 ${Math.round(18 - 10 * t)}px ${Math.round(28 - 16 * t)}px rgba(0,0,0,.09)) drop-shadow(0 0 ${Math.round(10 + 18 * glow)}px rgba(0,182,248,${(0.10 + 0.16 * glow).toFixed(3)}))`;
+
+      if (raw < 1) frameId = window.requestAnimationFrame(draw);
+    };
+
+    frameId = window.requestAnimationFrame(draw);
     const done = window.setTimeout(() => {
       completedRef.current = true;
       onComplete?.();
-    }, 3150);
-    return () => window.clearTimeout(done);
+    }, duration + 180);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(done);
+    };
   }, [handoff, onComplete]);
 
   return (
@@ -156,7 +231,7 @@ function WebsiteIntro({ onComplete, onHandoff }) {
         onEnded={beginHandoff}
         onError={beginHandoff}
       />
-      <div className="intro-logo-morph">
+      <div className="intro-logo-morph" ref={logoRef}>
         <BrandLogo />
       </div>
     </div>
@@ -198,8 +273,15 @@ function Hero() {
           <a className="primary-btn" href="#demo">Book a demo <ArrowRight size={18} /></a>
           <a className="secondary-btn" href="#platform">Explore features <ChevronRight size={18} /></a>
         </div>
+        <div className="hero-trust">
+          <span><ShieldCheck size={17} /> Accurate margins</span>
+          <span><Zap size={17} /> Faster quoting</span>
+          <span><LockKeyhole size={17} /> Controlled workflow</span>
+        </div>
       </div>
       <div className="hero-art reveal-up delay-1">
+        <div className="floating-chip chip-one"><Sparkles size={16} /> Smart quote ready</div>
+        <div className="floating-chip chip-two"><TrendingUp size={16} /> Margin +12%</div>
         <div className="logo-sculpture">
           <BrandLogo className="sculpture-logo" />
           <span className="slice-shadow" />
@@ -242,9 +324,11 @@ function Platform() {
       <div className="module-grid">
         {modules.map(({ icon: Icon, title, text }, index) => (
           <article className="module-card scroll-fade" style={{'--delay': `${index * 90}ms`}} key={title}>
+            <span className="module-number">0{index + 1}</span>
             <Icon size={28} />
             <h3>{title}</h3>
             <p>{text}</p>
+            <a href="#dashboard">View module <ChevronRight size={16} /></a>
           </article>
         ))}
       </div>
@@ -258,6 +342,7 @@ function StrategyBand() {
       <div className="scroll-fade">
         <p className="eyebrow">Measured outcomes</p>
         <h2>Accurate print pricing for teams that cannot afford guesswork.</h2>
+        <p className="strategy-copy">Price with real material costs, machine wear, electricity, labor, finishing, packaging, tax, and profit margin — then reuse the formula every time.</p>
       </div>
       <div className="metric-grid">
         {metrics.map(([value, label], index) => <div className="metric scroll-fade" style={{'--delay': `${index * 90}ms`}} key={label}><strong>{value}</strong><span>{label}</span></div>)}
@@ -270,9 +355,17 @@ function Solutions() {
   return (
     <section id="solutions" className="solutions section-pad">
       <div className="split-copy scroll-fade">
-        <p className="eyebrow dark">Solutions</p>
+        <p className="eyebrow dark">Workflow</p>
         <h2>From customer request to delivered print — all in one workflow.</h2>
         <p>3D-Pi replaces disconnected spreadsheets with a focused system for quoting, production status, materials, and profit tracking.</p>
+        <div className="workflow-rail">
+          {workflowSteps.map(([num, title, text]) => (
+            <article key={title}>
+              <b>{num}</b>
+              <div><h3>{title}</h3><p>{text}</p></div>
+            </article>
+          ))}
+        </div>
       </div>
       <div className="solution-list">
         {solutions.map((item, index) => <div className="scroll-fade" style={{'--delay': `${index * 65}ms`}} key={item}><CheckCircle2 size={19} /> {item}</div>)}
@@ -284,6 +377,10 @@ function Solutions() {
 function DashboardPreview() {
   return (
     <section id="dashboard" className="dashboard section-pad">
+      <div className="section-heading dashboard-heading scroll-fade">
+        <p className="eyebrow">Live operating system</p>
+        <h2>One cockpit for quotes, orders, inventory, and profit.</h2>
+      </div>
       <div className="dashboard-shell scroll-fade">
         <aside>
           <div className="brand small"><BrandLogo /><span>3D-Pi</span></div>
@@ -298,6 +395,12 @@ function DashboardPreview() {
             <DashCard icon={PieChart} label="Gross margin" value="41.6%" />
             <DashCard icon={Factory} label="3D printer utilization" value="78%" />
             <DashCard icon={FileText} label="Project quotes" value="14" />
+          </div>
+          <div className="production-map">
+            <div><span>Quote queue</span><strong>14</strong><i style={{height:'68%'}} /></div>
+            <div><span>Printing</span><strong>09</strong><i style={{height:'82%'}} /></div>
+            <div><span>Finishing</span><strong>05</strong><i style={{height:'46%'}} /></div>
+            <div><span>Ready</span><strong>12</strong><i style={{height:'74%'}} /></div>
           </div>
           <div className="table-card">
             <div className="table-row head"><span>Order</span><span>Material</span><span>Status</span><span>Margin</span></div>
@@ -315,6 +418,26 @@ function DashboardPreview() {
 
 function DashCard({ icon: Icon, label, value }) {
   return <div className="dash-card"><Icon size={21} /><span>{label}</span><strong>{value}</strong></div>;
+}
+
+function Insights() {
+  return (
+    <section className="insights section-pad">
+      <div className="section-heading left scroll-fade">
+        <p className="eyebrow dark">Why it works</p>
+        <h2>Built around the messy reality of 3D printing shops.</h2>
+      </div>
+      <div className="insight-grid">
+        {insights.map(([title, text], index) => (
+          <article className="insight-card scroll-fade" style={{'--delay': `${index * 90}ms`}} key={title}>
+            <span>{title}</span>
+            <h3>{text}</h3>
+            <p>Learn more <ArrowRight size={17} /></p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function CTA() {
